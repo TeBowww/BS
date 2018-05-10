@@ -5,53 +5,40 @@ session_start();
 
 require_once '../php/bibli_generale.php';
 require_once '../php/bibli_bookshop.php';
+error_reporting(E_ALL); 
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
-
-// Mise en forme de la Page générique-----
-td_html_start('../styles/bookshop.css', 'Inscription');
-
-//S l'utilisateur est déjà connecté : redirection vers l'index
 td_verify_unloged(isset($_SESSION['idUser']));
 ($_GET && $_POST) && td_redirection("./deconnexion.php");
 
-$connected = false;
-td_social_banner($connected, '../', './');
+td_html_start('../styles/bookshop.css', 'Inscription');
+td_social_banner(false, '../', './');
+
 $error = array();
 
-
-//Il y a deja eu soumission d'un formulaire d'inscription
+// ------------------------Arrivée par soumission d'un formulaire d'inscription-----------------------//
 if(isset($_POST['btn_soumission_inscription'])){
 
 	td_post_parameters('btn_soumission_inscription', 'je m inscrit !', array('email', 'passwd', 'names','naissance_j', 'naissance_m', 'naissance_a', 'pass_repet' ), 9);
 
-	$bd = td_bd_connect(); //une seule connexion à la base pour le script
+	$bd = td_bd_connect(); 
 	$error = td_verify_inscription_data($bd);
 
-	//Réaffichage de la page avec les erreurs survenues
-	if(!empty($error)){
+	
+	if(!empty($error)){ //_______________Réaffichage de la page avec les erreurs survenues
 		td_form_content($error);
 		mysqli_close($bd);
 	}
-	else{	//Inscription del'utilisateur dans la base et on le redirection vers la page consulté avant l'inscription
-		td_valide_inscription($bd, $_POST['email'], $_POST['names'], $_POST['passwd'], $_POST['naissance_m'], $_POST['naissance_j'], $_POST['naissance_a']);
-
-		//recuperation de l'id crée
+	else{	//Inscription de l'utilisateur dans BDD et redirection vers la page consulté avant l'inscription
 		
+		td_valide_inscription($bd, $_POST['email'], $_POST['names'], $_POST['passwd'], $_POST['naissance_m'], $_POST['naissance_j'], $_POST['naissance_a']);
 		mysqli_close($bd);
-		if(isset($_POST['page_pre'])) {
-			td_redirection($_POST['page_pre']);
-		}
-		else{
-			td_redirection("../index.php");
-		}
+		isset($_POST['page_pre']) ? td_redirection($_POST['page_pre']) : td_redirection("../index.php");
 	}
 	
-}
+} // --------------------------------------------------------------------------------------------------//
 else{
 	td_form_content($error);
 }
-
 
 $current_year = getdate();
 td_footer($current_year['year']);
@@ -81,12 +68,7 @@ function td_form_content($error){
 		'<p>Pour vous inscrire merci de renseigner les informations suivantes</p>',
 		'<form id="fomulaire_ins" method="post" action="inscription.php">';
 
-		//definition de la page à afficher à l'issus de la connexion
-		if(isset($_POST['page_pre'])) 
-			echo td_button(TD_Z_HIDDEN, 'source', $_POST['page_pre']);
-		else if(isset($_SERVER['HTTP_REFERER']))
-			echo td_button(TD_Z_HIDDEN, 'source', $_SERVER['HTTP_REFERER']);
-
+		td_keep_last_page();
 
 	echo
 		'<table>',

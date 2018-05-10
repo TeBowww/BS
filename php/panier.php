@@ -14,15 +14,15 @@ $connected = isset($_SESSION['idUser']) ? true : false;
 td_html_start('../styles/bookshop.css', 'Panier');
 td_social_banner($connected, '../', './');
 
-if(!isset($_SESSION['panier'])){
+if(!isset($_SESSION['panier'])){ //--------------Création d'un pannier si nécéssaire
 	td_print_empty_cart();
 }
-else if(isset($_POST['btn_valid_cart'])){
-	if(!isset($_SESSION['idUser'])){
+else if(isset($_POST['btn_valid_cart'])){ // ----Traitement de la validation du panier
+	if(!$connected){
 		td_unloged_content();
 	} 
 	else{
-		td_post_parameters('btn_valid_cart', 'Valider Le Panier', array(), 1);
+		td_post_parameters('btn_valid_cart', 'Valider Le Panier', array(), 1); //vérification anti hack
 		isset($_SESSION['idUser']) || td_redirection("./deconnexion.php");
 		td_insert_new_command();
 		td_clean_cart();
@@ -30,9 +30,10 @@ else if(isset($_POST['btn_valid_cart'])){
 	}
 }
 else{
-	isset($_GET['del']) && td_verify_form_parameters_number(1, './', $_GET) && td_delete_from_cart(td_control_get($_GET['del']));
-	isset($_GET['upcart']) && td_verify_form_parameters_number(1, './', $_GET) && td_modify_quantite(+1, td_control_get($_GET['upcart']));
-	isset($_GET['downcart']) && td_verify_form_parameters_number(1, './', $_GET) && td_modify_quantite(-1, td_control_get($_GET['downcart']));
+	$get_possible_value = array('del', 'upcart', 'downcart');
+	isset($_GET['del']) && td_verify_get_instance($get_possible_value, 1, './') && td_delete_from_cart(td_control_get($_GET['del']));
+	isset($_GET['upcart']) && td_verify_get_instance($get_possible_value, 1, './') && td_modify_quantite(+1, td_control_get($_GET['upcart']));
+	isset($_GET['downcart']) && td_verify_get_instance($get_possible_value, 1, './') && td_modify_quantite(-1, td_control_get($_GET['downcart']));
 	td_print_cart_content();
 } 
 
@@ -70,27 +71,32 @@ function td_print_empty_cart(){
  * @return 	void
  */
 function td_print_cart_content(){
-	$nbArticles = $nbArticles=count($_SESSION['panier']['liID']);
+
+	$nbArticles = count($_SESSION['panier']['liID']);
 	echo '<div class="sub_box">',
 			 '<div class="entete"> Mon Pannier </div>';
-	for ($i=0 ;$i < $nbArticles ; $i++){
+
+	for ($i=0 ;$i < $nbArticles ; $i++){ // ----------- Affichage des livres contenu dans le panier -- //
+
 		if($_SESSION['panier']['liID'][$i] === null){
 			continue;
 		}
-		$to_supp = "<a href=\"?del={$_SESSION['panier']['liID'][$i]}\"  title=\"delete_from_list\">Supprimer</a>";
+		$to_supp = "<a href=\"?del={$_SESSION['panier']['liID'][$i]}\"  title=\"delete\">Supprimer</a>";
 
 		$book=array('id' => $_SESSION['panier']['liID'][$i], 'quantite' =>$_SESSION['panier']['QtLivre'][$i], 'titre' => $_SESSION['panier']['liTitre'][$i], 'prix' => $_SESSION['panier']['prix'][$i], 'total' =>  $_SESSION['panier']['prix'][$i] * $_SESSION['panier']['QtLivre'][$i]);
 
 		echo '<hr color="gray" width="70%">';
-		td_print_cart_book($book, true);
-			
-	}
-	echo '<h2>Total des achats</h2>',
-		 'Prix total : ', td_prix_total(), ' Euros ',
-		 '<form method="post" action="panier.php" >',
-		  	td_button(TD_Z_SUBMIT, 'Valider Le Panier', 'btn_valid_cart', ''),
-		  '</form>',
-	'</div>';	
+		td_print_cart_book($book, true);		
+	}								// ---------------------------------------------------------//
+
+	echo 	'<h2>Total des achats</h2>',
+			 'Prix total : ', td_prix_total(), ' Euros ',
+
+			 '<form method="post" action="panier.php" >',
+			  		td_button(TD_Z_SUBMIT, 'Valider Le Panier', 'btn_valid_cart', ''),
+			  '</form>',
+
+		'</div>';	
 }
 
 /**
@@ -123,10 +129,7 @@ function td_insert_new_command(){
 	for($i = 0; $i < $total_book; $i++){
 		td_verify_book_existence($_SESSION['panier']['liID'][$i], $bd);
 		$sql .= td_insert_compo_command($bd, $command_id, $i);
-		if($i != $total_book -1)
-			$sql .= ',';
-		else
-			$sql .= ';';
+		$sql .= $i != $total_book -1 ? ',' : ';';
 	}
 	mysqli_query($bd, $sql) or td_bd_erreur($bd, $sql);
 	mysqli_close($bd);	
@@ -190,7 +193,11 @@ function td_new_command_content(){
  */
 function td_delete_from_cart($delete){
 
-	$indice = array_search($delete,$_SESSION['panier']['liID']);
+																// ----- Recherche de la position de l'objet à supprimer
+
+	$indice = array_search($delete,$_SESSION['panier']['liID']); 		
+
+																// ------ Supression des champs associés à l'objet
 	unset($_SESSION['panier']['liID'][$indice]);
 	$_SESSION['panier']['liID'] = array_values($_SESSION['panier']['liID']);
 
@@ -203,6 +210,7 @@ function td_delete_from_cart($delete){
 	unset($_SESSION['panier']['liTitre'][$indice]);
 	$_SESSION['panier']['liTitre'] = array_values($_SESSION['panier']['liTitre']);
 
+																// ----- Si le pannier est vide, on le supprime
 	if(empty($_SESSION['panier']['liID'])){
 		td_supprime_panier();
 		td_redirection("#");
@@ -223,7 +231,7 @@ function td_modify_quantite($value, $liID){
       {
          $_SESSION['panier']['QtLivre'][$positionProduit] += $value ;
 
-         $_SESSION['panier']['QtLivre'][$positionProduit] <= 0 ? td_delete_from_cart($liID) : '';
+         $_SESSION['panier']['QtLivre'][$positionProduit] <= 0 ? td_delete_from_cart($liID) : ''; // Suppression de l'objet si la quantité est nulle
       }
     else{
    		td_add_result(array('error' => 'Erreur, nomero de livre non correct'));

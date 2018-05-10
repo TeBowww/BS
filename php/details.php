@@ -7,24 +7,26 @@ require_once '../php/bibli_bookshop.php';
 
 $error = null;
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
+error_reporting(E_ALL);
 $connected = isset($_SESSION['idUser']) ? true : false;
 ($_GET && $_POST || $_POST) && td_redirection("./deconnexion.php");
+$get_possible_value = array('whish', 'cart', 'article');
+td_verify_get_instance($get_possible_value, 1, './');
+
+td_html_start('../styles/bookshop.css', 'Details');
+td_social_banner($connected, '../', './');
      
 $valueArticle = '';
 $bd = td_bd_connect();
+
 if($connected === true && isset($_GET['whish'])){
 	$error = td_add_to_wish($_GET['whish'], $bd);
 }
 if(isset($_GET['cart'])){
 	$error = td_add_to_cart($_GET['cart'], $bd);
 }
-td_verify_parameters($_GET['article'], true, './') || td_redirection("./deconnexion.php");
+
 $valueArticle = td_control_get ($_GET['article']);
-
-
-td_html_start('../styles/bookshop.css', 'Details');
-td_social_banner($connected, '../', './');
 
 tdl_contenu($bd, $valueArticle, $error);
 
@@ -131,11 +133,11 @@ function td_afficher_detail($livre, $prefix, $to_whish) {
 			  $supportLien ="{$auteur['prenom']} {$auteur['nom']}";
 			  if ($i > 0) {
 				  echo '<br><br> ';
-		  }
+		  	}
 		  $i++;
 		  
-		  echo '<a href="', $prefix, 'php/recherche.php?type=auteur&quoi=', urlencode($auteur['nom']), '">',td_entities_protect($supportLien), '</a> , Née en ', $auteur['pays'] ,'<br>',
-		  'Bio : ', $auteur['bio'] ,'<br><br>';
+		  echo '<a href="', $prefix, 'php/recherche.php?type=auteur&quoi=', urlencode($auteur['nom']), '">',td_entities_protect($supportLien), '</a> , Née en ', td_entities_protect($auteur['pays']) ,'<br>',
+		  'Bio : ', td_entities_protect($auteur['bio']) ,'<br><br>';
 	  }
 	  echo '</div>';
 }

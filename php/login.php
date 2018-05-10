@@ -5,14 +5,12 @@ session_start();
 
 require_once '../php/bibli_generale.php';
 require_once '../php/bibli_bookshop.php';
+error_reporting(E_ALL);
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
-
-//Verifie si la personne est deja authentifiée
 td_verify_unloged(isset($_SESSION['idUser']));
 ($_GET && $_POST) && td_redirection("./deconnexion.php");
 
-// Mise en forme de la Page générique-----
+
 td_html_start('../styles/bookshop.css', 'Login');
 td_social_banner(false, '../', './');
 
@@ -26,18 +24,14 @@ if(isset($_POST['bounton_envoi_login'])){
 		td_login_content(array('error' => "Identifiant / mdp non valide")); // réimpression du contenu avec message d'erreurs
 	}
 	else{
-		$_SESSION['idUser'] = $cliID;  // Mémorisation de la connexion et redirection vers la page précédente
-		if(isset($_POST['page_pre'])) 
-			td_redirection($_POST['page_pre']);
-		else
-			td_redirection("../index.php");
+		$_SESSION['idUser'] = $cliID; 
+		isset($_POST['page_pre']) ? td_redirection($_POST['page_pre']) : td_redirection("../index.php");
 	}
 }
 // ----------------- Arrivée sur la page depuis une autre page bookshop
 else{
 	td_login_content(false);
 }
-
 
 $current_year = getdate();
 td_footer($current_year['year']);
@@ -60,14 +54,11 @@ ob_end_flush();
 function td_login_content($error){
 	echo '<h1>Connexion à Bookshoop</h1>';
 	
-	td_add_result($error);
+			td_add_result($error);
 
 	echo  '<div class="box">'; 
-	
-	td_login_box();
-
-	td_sign_in_box();
-
+				td_login_box();
+				td_sign_in_box();
 	echo '</div>';
 }
 
@@ -82,11 +73,7 @@ function td_login_box(){
 			 '<div class="entete"> Deja inscrit ? </div>',
 				'<form method="post" action="login.php">';
 
-		//definition de la page à afficher à l'issus de la connexion
-		if(isset($_POST['page_pre'])) 
-			echo td_button(TD_Z_HIDDEN, 'source', $_POST['page_pre']);
-		else if(isset($_SERVER['HTTP_REFERER']))
-			echo td_button(TD_Z_HIDDEN, 'source', $_SERVER['HTTP_REFERER']);
+				 td_keep_last_page();
 
 		echo	'<table>',
 					td_form_ligne("email", td_form_input(TD_Z_TEXT, "email", "")),
@@ -109,11 +96,7 @@ function td_sign_in_box(){
 			 '<p>L\'inscription est gratuite et ne prends que quelques secondes</p>',
 				'<form method="post" action="inscription.php">';
 
-				//definition de la page à afficher à l'issus de l'inscription
-				if(isset($_POST['page_pre'])) 
-					echo '<input type="hidden" name="page_pre" value="',td_entities_protect($_POST['page_pre']),'">';
-				else if(isset($_SERVER['HTTP_REFERER']))
-					echo '<input type="hidden" name="page_pre" value="',$_SERVER['HTTP_REFERER'],'">';
+				 td_keep_last_page();
 
 				echo
 					 td_button(TD_Z_SUBMIT, "Inscription", "bouton_envoi_inscription",  "form_btn"),
@@ -147,10 +130,11 @@ function td_verify_login_data(){
 			$cliID = td_entities_protect($tableau['cliID']);
 		}
 
-		// Liberation des ressources ----------------
 		mysqli_free_result($res);
 		mysqli_close($bd);
 		return $cliID;
 }
+
+
 
 ?>

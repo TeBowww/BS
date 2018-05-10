@@ -6,13 +6,12 @@ session_start();
 require_once '../php/bibli_generale.php';
 require_once '../php/bibli_bookshop.php';
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
+error_reporting(E_ALL);
 td_verify_loged(isset($_SESSION['idUser']));
 ($_GET && $_POST) && td_redirection("./deconnexion.php");
 
-// Mise en forme de la Page générique-----
-td_html_start('../styles/bookshop.css', 'Mon Compte');
 
+td_html_start('../styles/bookshop.css', 'Mon Compte');
 td_social_banner(true, '../', './');
 
 $bd = td_bd_connect();
@@ -71,7 +70,7 @@ function td_account_content($error, $bd){
 
 	$sql = "SELECT cliEmail, cliNomPrenom, cliAdresse, cliVille, cliCP, cliPays
 			FROM clients
-			WHERE cliID =".$_SESSION['idUser'];
+			WHERE cliID =".(int)$_SESSION['idUser'];
 
 		$res = mysqli_query($bd, $sql) or td_bd_erreur($bd, $sql);
 		$tableau = mysqli_fetch_assoc($res);

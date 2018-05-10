@@ -117,7 +117,6 @@ function td_footer($year){
 function td_data_traitement_vertical($res, $position, $sider){
 
 	$last_id = -1;
-	$limit = 0;
 	$buffer=array();
 	$author = array();
 	while($tableau = mysqli_fetch_assoc($res)){
@@ -133,9 +132,6 @@ function td_data_traitement_vertical($res, $position, $sider){
 			td_print_books_vertical($buffer, $author, $sider, $show_whish);
 			$author = array();
 			$buffer = array();
-			$limit +=1;
-			if($limit === 4)
-				break;
 		}
 
 		$to_wish = isset($_SESSION['idUser']) ? $tableau['listIDLivre'] : null;
@@ -170,14 +166,14 @@ function td_print_books_vertical($books, $auth, $show_sider, $show_whish){
 			echo td_siders($books[2], $show_whish);
 
 			echo
-			'<a href="php/details.php?article=', $books[2], '" title="',$books[1],'">',
-				'<img class="index" src="', $books[0], '" alt="', $books[1],'">',
+			'<a href="php/details.php?article=', urlencode(td_entities_protect($books[2])), '" title="',urlencode(td_entities_protect($books[1])),'">',
+				'<img class="index" src="', td_entities_protect($books[0]), '" alt="',td_entities_protect($books[1]),'">',
 			'</a><br>';
 			
 			 td_print_author($auth, 'php/');
 		echo
 			'<br>',
-			'<strong>', $books[1], '</strong> '	,		
+			'<strong>', td_entities_protect($books[1]), '</strong> '	,		
 		'</div>';
 }
 
@@ -294,9 +290,9 @@ function td_print_book($book, $author, $show_sider, $show_whish){
 function td_print_author($auth, $position){
 	$last_key = end($auth);
 	foreach($auth as $author){
-				$dot = $author == $last_key ?  '' : ',';
-				echo '<a title="Rechercher l\'auteur ', $author['nom'],'"  href="',$position,'recherche.php?type=auteur&quoi=', urlencode($author['nom']),'">',$author['prenom'], ' ', $author['nom'], $dot, '  </a>';	
-			}
+		$dot = $author == $last_key ?  '' : ',';
+		echo '<a title="Rechercher l\'auteur ', td_entities_protect($author['nom']),'"  href="',$position,'recherche.php?type=auteur&quoi=', urlencode($author['nom']),'">',td_entities_protect($author['prenom']), ' ', td_entities_protect($author['nom']), $dot, '  </a>';	
+	}
 }
 
 //____________________________________________________________________________
@@ -310,20 +306,20 @@ function td_print_author($auth, $position){
  */
 function td_siders($liID, $show_whish){
 	global $connected;
-	$adds = '';
-	$adds .= isset($_GET['quoi']) ? '&quoi='.$_GET['quoi'] : '';
-	$adds .= isset($_GET['type']) ? '&type='.$_GET['type'] : '';
-	$adds .= isset($_GET['t']) ? '&t='.$_GET['t'] : '';
-	$adds .= isset($_GET['p']) ? '&p='.$_GET['p'] : '';
-
-	if(isset($_POST['quoi'])){
-		$adds = '&quoi='.$_POST['quoi'];
-		$adds .= isset($_POST['type']) ? '&type='.$_POST['type'] : '';
+	$adds = ''; // ------------------ Maintient des informations déja présentes dans $_GET
+	foreach($_GET as $key => $value){
+		$value_encode = urlencode($value);
+		$key != 'cart' && $key != 'whish' && $adds .= "&{$key}={$value_encode}";
 	}
 
-	echo '<a class="addToCart" href="?cart=', $liID, $adds, '" title="Ajouter au panier"></a>';
+	if(isset($_POST['quoi'])){
+		$adds = '&quoi='.urlencode($_POST['quoi']);
+		$adds .= isset($_POST['type']) ? '&type='.urlencode($_POST['type']) : '';
+	}
+
+	echo '<a class="addToCart" href="?cart=', urlencode($liID), $adds, '" title="Ajouter au panier"></a>';
 	if($connected === true && $show_whish)
-		echo '<a class="addToWishlist" href="?whish=',$liID, $adds,'" title="Ajouter à la liste de cadeaux"></a>';
+		echo '<a class="addToWishlist" href="?whish=', urlencode($liID), $adds,'" title="Ajouter à la liste de cadeaux"></a>';
 }
 
 //____________________________________________________________________________
@@ -382,7 +378,6 @@ function td_print_cart_book($livre, $supp){
  * @return 	void
  */
 function td_sider_cart($liID){
-
 	echo '<a class="upQuantite" href="?upcart=', $liID, '" title="Ajouter une unité"></a>';
 	echo '<a class="downQuantite" href="?downcart=',$liID,'" title="Enlever une unité"></a>';
 }
@@ -439,7 +434,7 @@ function td_add_to_cart($liID, $bd){
 	$res = mysqli_query($bd, $sql) or td_bd_erreur($bd, $sql);
 	$tab = mysqli_fetch_assoc($res);
 
-	td_ajouter_article($liID, 1, $tab['liTitre'], $tab['liPrix']);
+	td_ajouter_article($liID, 1, $tab['liTitre'], (int)$tab['liPrix']);
 
 	return array('success' => "L'élément a bien été ajouté à votre panier !");
 }
@@ -488,8 +483,8 @@ function td_verify_whish_presence($whishID, $bd){
 			FROM livres, listes, clients
 			WHERE liID = listIDLivre
 			AND listIDClient = cliID
-			AND cliID=".$_SESSION['idUser'].
-			" AND liID=".$whishID;
+			AND cliID=".(int)$_SESSION['idUser'].
+			" AND liID=".(int)$whishID;
 
 	$res = mysqli_query($bd, $sql) or td_bd_erreur($bd, $sql);
 	$presence = false;
@@ -696,14 +691,14 @@ function td_prepare_pages($sql, $total_livres, $pagination, $from){
  * @param  void
  */
 function td_print_pagination($pages, $position, $quoi, $type, $total_livres){
-	$print_type = $type != null ? "&type=$type" : '';
+	$print_type = $type != null ? "&type=".urlencode($type) : '';
 	echo '<p class="pagination">Pages : ';
 			foreach($pages as $p){
 				if($p['position'] === $position)
 					echo $p['num_page'], ' ';
 				else{
 					echo '<a href="', $_SERVER['PHP_SELF'],
-					'?quoi=', $quoi, $print_type, '&t=', $total_livres, '&p=', $p['position'], '">', 
+					'?quoi=', urlencode($quoi), $print_type, '&t=', (int)$total_livres, '&p=', $p['position'], '">', 
 					$p['num_page'], ' </a> ';
 				}
 			}
@@ -833,6 +828,18 @@ function td_error_formulaire($error){
 		echo 	'</p>',
 			'</div>';
 	}
+}
+
+/**
+ * Maintient de la page précédente pour rediriger l'utilisateur après le login
+ *
+ * @return 	void
+ */
+function td_keep_last_page(){
+	if(isset($_POST['page_pre'])) 
+		echo '<input type="',TD_Z_HIDDEN, '" name="page_pre" value="',td_entities_protect($_POST['page_pre']),'">';
+	else if(isset($_SERVER['HTTP_REFERER']))
+		echo '<input type="',TD_Z_HIDDEN, '" name="page_pre" value="',$_SERVER['HTTP_REFERER'],'">';
 }
 
 
@@ -1021,16 +1028,16 @@ function td_sql_book_create($connected, $where){
 	if(!$connected){
 		$sql = "SELECT liID, liTitre, liPrix, liPages, liISBN13, liResume, auBio, liAnnee, liLangue, liCat, edNom, edWeb, auNom, auPrenom, auPays
 				FROM livres INNER JOIN editeurs on edID = liIDediteur
-				INNER JOIN aut_livre ON liID = al_IDLivre
-				INNER JOIN auteurs ON al_IDAuteur = auID
+							INNER JOIN aut_livre ON liID = al_IDLivre
+							INNER JOIN auteurs ON al_IDAuteur = auID
 				{$where}";
 	}
 	else{
 			$sql = "SELECT liID, liTitre, liPrix, liPages, liISBN13, liResume, auBio, liAnnee, liLangue, liCat, edNom, edWeb, auNom, auPrenom, auPays, listIDLivre
 					FROM livres INNER JOIN editeurs on edID = liIDediteur
-					INNER JOIN aut_livre ON liID = al_IDLivre
-					INNER JOIN auteurs ON al_IDAuteur = auID
-					LEFT OUTER JOIN listes ON liID = listIDLivre AND listIDClient = '{$_SESSION['idUser']}'
+								INNER JOIN aut_livre ON liID = al_IDLivre
+								INNER JOIN auteurs ON al_IDAuteur = auID
+								LEFT OUTER JOIN listes ON liID = listIDLivre AND listIDClient = '{$_SESSION['idUser']}'
 					{$where}";
 		}
 		

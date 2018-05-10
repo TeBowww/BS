@@ -7,27 +7,27 @@ session_start();
 require_once '../php/bibli_generale.php';
 require_once '../php/bibli_bookshop.php';
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
+error_reporting(E_ALL);
 ($_GET && $_POST) && td_redirection("./deconnexion.php");
      
-
 // Mise en forme de la Page générique-----
 td_html_start('../styles/bookshop.css', 'Recherche');
-$bd = td_bd_connect();
-$error = null;
 $connected = isset($_SESSION['idUser']) ? true : false;
 td_social_banner($connected, '../', './');
 
+$bd = td_bd_connect();
+$error = null;
 $quoi = false;
 $type='auteur';
 
-//test de la méthode d'appel et génération du code en conséquence
+//test de la méthode d'appel de la page et génération du code en conséquence
+
 if(isset($_POST['rechercher'])){ // -----------------------------------------Arrivée par méthode Post ----------------
-	td_post_parameters('rechercher', 'Rechercher', array('quoi', 'type'), 3); //contrôle anti hacking
+	td_post_parameters('rechercher', 'Rechercher', array('quoi', 'type'), 3);
 	$quoi = $_POST['quoi'];
 	$type = $_POST['type'];
 }
-else if(td_verify_get_presence()){ // --------------------------------------Arrivée par méthode Get ----------------
+else if($_GET){ // --------------------------------------Arrivée par méthode Get ----------------
 
 	//Mise ne whishlist
 	isset($_GET['whish']) && isset($_SESSION['idUser']) && $error = td_add_to_wish(td_control_get($_GET['whish']), $bd);
@@ -35,10 +35,12 @@ else if(td_verify_get_presence()){ // --------------------------------------Arri
 	//Ajout au Panier
 	isset($_GET['cart']) && $error = td_add_to_cart(td_control_get($_GET['cart']), $bd);
 	
+	//recherche d'auteur
 	if(isset($_GET['quoi'])){
 		$quoi = td_control_get($_GET['quoi']);
 		$type = td_control_get($_GET['type']);
-		td_verify_search_author($type);
+		$get_possible_value = array('whish', 'cart', 'quoi', 'type', 't', 'p');
+		td_verify_get_instance($get_possible_value, 2, './');
 	}
 }
 
@@ -68,33 +70,16 @@ ob_end_flush();
  */
 function td_search($quoi, $type, $bd){
 
-	// préparation de la requête
 	$wanted =  td_bd_protect($bd, $quoi);
-
-	//Génération de la requete sql
 	$reserch = ($type === 'auteur') ? " AND auNom LIKE '%$wanted%')" : " AND liTitre LIKE '%$wanted%')";
-
 	$where = "WHERE liID IN (SELECT liID
 							FROM livres, aut_livre, auteurs
 							WHERE liID = al_IDLivre
 							AND al_IDAuteur = auID {$reserch}";
+
 	$sql = td_sql_book_create(isset($_SESSION['idUser']), $where);
 
-	td_pagination_start($bd, $quoi, $sql, 'liID', 'recherche', $type, true);
-}
-
-
-/**
- * Verification du bon nombre de paramètres et de la présence d'auteur -> utilisé pour recherche en cliquant sur un nom d'auteur
- * Autrement, redirection vers l'index 
- *
- * @param 	String 	$type		Type de recherche à vérifier
- * @return 	void
- */
-function td_verify_search_author($type){
-	if((count($_GET) < 2 &&  count($_GET) > 6 )){
-		td_redirection("../index.php");	
-	}
+	td_pagination_start($bd, $quoi, $sql, 'liID', 'recherche', $type, true); // affichage des livres avec pagination
 }
 
 /**
@@ -116,10 +101,8 @@ function td_reserch_bar($quoi, $type, $error){
 			'<form method="post" action="recherche.php">',
 			'<p>',
 				'<label for="Recherche">Rechercher</label> : <input type="text" name="quoi" spellcheck="false" autofocus id="Recherche"';
-				if($quoi === false)
-					echo ' placeholder="Ex : Moore"';
-				else
-					echo ' value="', $quoi, '"';
+				echo $quoi === false ?  ' placeholder="Ex : Moore"' : ' value="', $quoi, '"';
+
 			echo
 				' required/>',
 				' dans  ',

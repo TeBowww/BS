@@ -6,17 +6,16 @@ session_start();
 require_once '../php/bibli_generale.php';
 require_once '../php/bibli_bookshop.php';
 
-error_reporting(E_ALL); // toutes les erreurs sont capturées (utile lors de la phase de développement)
+error_reporting(E_ALL);
 
 td_verify_loged(isset($_SESSION['idUser']));
-($_GET && $_POST) && td_redirection("./deconnexion.php");
+($_GET || $_POST) && td_redirection("./deconnexion.php");
 
-// Mise en forme de la Page générique-----
+
 td_html_start('../styles/bookshop.css', 'mes_commandes');
-
 td_social_banner(true, '../', './');
 
-$bd = td_bd_connect(); //une seule connexion à la base pour le script
+$bd = td_bd_connect();
 
 td_commandes_content($bd);
 
@@ -36,6 +35,7 @@ ob_end_flush();
  * Recherche en BDD des commandes et lancement de l'impression des commandes
  *
  * @param 	$bd 	Connexion a la BDD
+ *
  * @return 	$void
  */
 function td_commandes_content($bd){
@@ -48,7 +48,7 @@ function td_commandes_content($bd){
 			AND ccIDLivre = liID
 			AND coIDClient =".(int)$_SESSION['idUser'].
 			" GROUP BY liID, coID
-			ORDER BY coDate DESC, coHEURE DESC";
+			ORDER BY coDate DESC, coHEURE DESC, coID DESC";
 	$res = mysqli_query($bd, $sql) or td_bd_erreur($bd, $sql);
 
 	$command=array();
@@ -64,6 +64,7 @@ function td_commandes_content($bd){
 
 		if($last_co_id === -1 || $last_co_id != $tableau['coID']){
 			$command = array('id_co' => $tableau['coID'], 'date' => $tableau['coDate'], 'heure' => $tableau['coHeure'], 'id' => $tableau['liID'], 'prix_total' => 0, 'book' => array());
+
 		}
 
 		$command['book'][] = array('id' => $tableau['liID'], 'quantite' => $tableau['ccQuantite'], 'titre' => $tableau['liTitre'], 'prix' => $tableau['liPrix'], 'total' => $tableau['PrixTotal']);
@@ -76,10 +77,11 @@ function td_commandes_content($bd){
 
 	}
 
-	if($last_co_id == -1){
+	if($last_co_id === -1){
 			echo '<p>Vous n\'avez aucune commande enregistré</p>';
 	}
 	else{
+		$command['prix_total'] = $total;
 		td_print_commande($command);
 	}
 }
@@ -111,18 +113,19 @@ function td_print_commande($command){
 	}
 	$time = "{$h}H{$m}";
 	
-	echo
+	echo // --------------------Affichage du contenu des commandes ---------//
 	'<div class="sub_box">',
 	 '<div class="entete">Commande N°',$command['id_co'],' </div>',
 		'<table>',
 			td_form_ligne('Passée le', $date),
 			td_form_ligne('A', $time),
-			td_form_ligne('Prix Total', td_entities_protect($command['prix_total']).'€'),
+			td_form_ligne('Prix Total', $command['prix_total'].'€'),
 		'</table>',
 		'<h2>Détails de la commande</h2>';
-			foreach($command['book'] as $livre){
-				td_print_cart_book($livre, false);
-			}
+
+		foreach($command['book'] as $livre){
+			td_print_cart_book($livre, false);
+		}
 
 	echo 
 	'</div>';				

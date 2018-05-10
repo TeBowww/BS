@@ -8,9 +8,11 @@ require_once '../php/bibli_bookshop.php';
 
 error_reporting(E_ALL); 
 
+//Protections
 $connected = isset($_SESSION['idUser']) ? true : false;
 ($_GET && $_POST) && td_redirection("./deconnexion.php");
-$_GET && !isset($_GET['qui']) && !isset($_GET['del']) && !isset($_GET['quoi']) && !isset($_GET['cart']) && !isset($_GET['wish']) && td_redirection("./deconnexion.php");
+$get_possible_value = array('whish', 'del', 'quoi', 'cart');
+
 
 td_html_start('../styles/bookshop.css', 'Liste de Shouaits');
 td_social_banner($connected, '../', './');
@@ -18,21 +20,23 @@ td_social_banner($connected, '../', './');
 $error = null;
 $bd = td_bd_connect();
 
-isset($_GET['del']) && td_delete_from_list($bd, td_control_get($_GET['del']));
-isset($_GET['cart']) && $error = td_add_to_cart(td_control_get($_GET['cart']), $bd);
+
+isset($_GET['del']) &&  td_delete_from_list($bd, td_control_get($_GET['del'])); // -----------------Supression d'un élément
+
+isset($_GET['cart']) && $error = td_add_to_cart(td_control_get($_GET['cart']), $bd); // -------------Ajout au Panier
+
 $quoi = $connected ? $_SESSION['idUser'] : '';
 $qui=false;
 
-
-if(isset($_POST['rechercher'])){
+if(isset($_POST['rechercher'])){ // --------------------------- Arrivée par recherche d'email
 	td_post_parameters('rechercher', 'Rechercher', array('quoi', 'qui'), 3);
 	$qui = td_entities_protect($_POST['qui']);
 	$quoi = td_entities_protect($_POST['quoi']);
 }
-
+																				//----------------------Recherche de liste par email
 isset($_GET['quoi'])  && td_verify_mail_id($bd, td_control_get($_GET['quoi'])) && $quoi = td_entities_protect($_GET['quoi']);
 
-if($connected == true && isset($_GET['whish'])){
+if($connected == true && isset($_GET['whish'])){	// ------------------------------------------------Ajout à la whishlist
 	$error = td_add_to_wish($_GET['whish'], $bd);
 }
 
@@ -161,7 +165,7 @@ function td_bar_search($bd,$qui,$quoi){
 					echo ' value="', $qui, '"';
 			echo
 				' required/>',
-				'	<input type="hidden" name="quoi" value="',$quoi,'">',
+				'	<input type="hidden" name="quoi" value="', urlencode($quoi),'">',
 				'	<input class="btn" type="submit" name="rechercher" value="Rechercher">',
 			'</p>',
 			'</form>';
@@ -201,9 +205,8 @@ function td_data_traitement_wish($res){
         while($tableau = mysqli_fetch_assoc($res)){
              echo 
 		        '<div class="wish_search bcSell">',
-		        	'<a href="liste.php?quoi=', $tableau['cliEmail'], '">', $tableau['cliEmail'], '</a> <br>',
+		        	'<a href="liste.php?quoi=', urlencode(td_entities_protect($tableau['cliEmail'])), '">',td_entities_protect($tableau['cliEmail']), '</a> <br>',
 		        '</div>';
-
             $last_id = $tableau['cliEmail'];
         }
 

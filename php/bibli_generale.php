@@ -281,7 +281,29 @@ function td_verify_get_presence(){
 }
 
 /**
- *  Contrôle de la validité des informations reçues via la query string 
+ * Verification d'un nombre suffisant et de la bonne valeur attendue de paramètres pour la recherche en $_GET-> utilisé pour recherche en cliquant sur un nom d'auteur
+ * Autrement, redirection vers l'index 
+ *
+ * @param   array   $get_possible_value    Tableau des clefs possible en $_GET
+ * @param   int     $n                     Nombre minimum d'informations par méthode GET
+ * @param   String  $path_to_index         Chemin pour rejoindre la page déconnexion
+ *
+ * @return  boolean                        Confirmation de la conformité des informations
+ */
+function td_verify_get_instance($get_possible_value, $n, $path_to_index){
+
+    count($_GET) < $n && td_redirection("{$path_to_index}deconnexion.php"); 
+
+    foreach($_GET as $key => $value){
+        array_search($key, $get_possible_value) === false && td_redirection("{$path_to_index}deconnexion.php");
+    }
+
+    return true;
+
+}
+
+/**
+ *  Contrôle de la validité des informations reçues via la query string et renvoie une version protégée de la valeur
  *
  * En cas d'informations invalides, la session de l'utilisateur est arrêtée et il redirigé vers la page index.php
  *
@@ -299,14 +321,6 @@ function td_control_get ($attribut){
     
     return $valueQ;
 }
-
-/*function td_control_text_input($content, $lenght = 200){                          //Non utilisé dans ce projet mais sera amené à l'être
-    $trim_content = trim($content);
-    if($trim_mail != strip_tags($trim_mail))
-        return "- Le champ ne doit pas contenir de balises html";
-    if(mb_strlen($trim_mail, 'utf-8') > $lenght)
-        return "- L'email ne doit pas dépasser 30 characteres";
-}*/
 
 /*################################################################################
                   Fonctions relative à l'espace Utilisateur
